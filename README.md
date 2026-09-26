@@ -41,3 +41,13 @@ places it under `Extensions\\wxl-skyriding`. Restart the client after installing
 
 For manual installation, extract the release ZIP to the same directory after installing every client
 dependency. Configure and rebuild the server separately.
+
+## Integration and release checks
+
+Build `wxl-skyriding` as a Win32 Release target against the exact core, Runtime 1.1, Spell Charges 1.1, and Modern M2 animation service revisions. The proposed release workflow packages the DLL only. Server state/impulse handlers, Spell Charge persistence, WotLK-compatible spell rows, and an AdvFly-capable mount remain separately reviewed prerequisites.
+
+Test mount entry, takeoff, glide, pitch/turn control, vigor spending and recharge, landing, reconnect, and a server correction. Verify the client and server agree on `0x0527`-`0x052A`, and inspect logs. Roll back the DLLs and coordinated server/client data together. This source draft compiles in the integration checkout but requires an isolated package build and runtime acceptance; the `main` workflow still targets moving upstream `v1.1`.
+
+## Credits
+
+The WXL core ABI and original module interfaces come from WarcraftXL contributors. The local v1.1 integration commits in this snapshot are attributed to Furioz in the integration history. Preserve source-file notices and the GPL-3.0-or-later `LICENSE` when redistributing source or binaries.
