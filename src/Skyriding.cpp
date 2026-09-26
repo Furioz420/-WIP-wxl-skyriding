@@ -5,8 +5,8 @@
 #include "Skyriding.hpp"
 #include "game/M2Animation.hpp"
 #include "game/Movement.hpp"
+#include "game/Unit.hpp"
 #include "game/World.hpp"
-#include "wxl/WxlOpcodes.h"
 #include "engine/events/Event.hpp"
 
 #include <windows.h>
@@ -28,14 +28,15 @@ namespace
     namespace ev = wxl::events;
     namespace m2animation = wxl::game::m2animation;
     namespace movement = wxl::game::movement;
+    namespace unit = wxl::game::unit;
     namespace world = wxl::game::world;
 
     namespace opcodes
     {
-        constexpr uint16_t CmsgSkyriding = WXL_CMSG_SKYRIDING;
-        constexpr uint16_t SmsgSkyriding = WXL_SMSG_SKYRIDING;
-        constexpr uint16_t CmsgMoveAddImpulseAck = WXL_CMSG_MOVE_ADD_IMPULSE_ACK;
-        constexpr uint16_t SmsgMoveAddImpulse = WXL_SMSG_MOVE_ADD_IMPULSE;
+        constexpr uint16_t CmsgSkyriding = 0x0527;
+        constexpr uint16_t SmsgSkyriding = 0x0528;
+        constexpr uint16_t CmsgMoveAddImpulseAck = 0x0529;
+        constexpr uint16_t SmsgMoveAddImpulse = 0x052A;
     }
 
     namespace network
@@ -242,7 +243,7 @@ namespace
         if (!unit) return nullptr;
         __try
         {
-            return movement::UnitModel(unit);
+            return unit::Model(unit);
         }
         __except (EXCEPTION_EXECUTE_HANDLER)
         {
@@ -263,20 +264,6 @@ namespace
         }
     }
 
-    uint32_t ModelSequenceDuration(
-        void* model, unsigned int animationId) noexcept
-    {
-        if (!model) return 0;
-        __try
-        {
-            return m2animation::ModelSequenceDuration(model, animationId);
-        }
-        __except (EXCEPTION_EXECUTE_HANDLER)
-        {
-            return 0;
-        }
-    }
-
     bool ModelSupportsAdvFly(void* model) noexcept
     {
         return ModelHasSequence(model, kAnimForwardGlide);
@@ -288,7 +275,7 @@ namespace
         if (!body) return nullptr;
         __try
         {
-            void* parent = movement::ModelParent(body);
+            void* parent = unit::ModelParent(body);
             if (parent && ModelSupportsAdvFly(parent)) return parent;
             return ModelSupportsAdvFly(body) ? body : nullptr;
         }
@@ -303,20 +290,25 @@ namespace
         return AnimationModel(unit) != nullptr;
     }
 
-    uint32_t& MovementFlags(void* unit)
+    template <class T, T (*Read)(void*), void (*Write)(void*, T)>
+    struct LiveField
     {
-        return movement::Flags(unit);
-    }
+        void* unit = nullptr;
 
-    float& Facing(void* unit)
-    {
-        return movement::Facing(unit);
-    }
+        operator T() const { return Read(unit); }
+        LiveField& operator=(T value) { Write(unit, value); return *this; }
+        LiveField& operator&=(T value) { return *this = static_cast<T>(*this) & value; }
+        LiveField& operator|=(T value) { return *this = static_cast<T>(*this) | value; }
+    };
 
-    float& Pitch(void* unit)
-    {
-        return movement::Pitch(unit);
-    }
+    using MovementFlagsField =
+        LiveField<uint32_t, movement::MoveFlags, movement::SetMoveFlags>;
+    using FacingField = LiveField<float, movement::Facing, movement::SetFacing>;
+    using PitchField = LiveField<float, movement::Pitch, movement::SetPitch>;
+
+    MovementFlagsField MovementFlags(void* unit) { return {unit}; }
+    FacingField Facing(void* unit) { return {unit}; }
+    PitchField Pitch(void* unit) { return {unit}; }
 
     float* UnitPosition(void* unit)
     {
@@ -330,7 +322,7 @@ namespace
         __try
         {
             return movement::TraceLine(
-                end, start, result, distanceFraction, flags);
+                start, end, result, distanceFraction, flags);
         }
         __except (EXCEPTION_EXECUTE_HANDLER)
         {
@@ -428,14 +420,6 @@ namespace
         }
     }
 
-    float AnySequenceTime() noexcept
-    {
-        float value = 0.0f;
-        const uint32_t bits = 0xFFFFFFFFu;
-        std::memcpy(&value, &bits, sizeof(value));
-        return value;
-    }
-
     void ReleaseAnimation()
     {
         g_state.phase = AnimationPhase::Idle;
@@ -465,15 +449,11 @@ namespace
         const bool same = g_state.boneAnimation == animationId &&
             std::fabs(g_state.boneSpeed - speed) < 0.01f;
         if (same && !force) return;
-        if (sequenceTime < 0.0f)
-            sequenceTime = speed < 0.0f
-                ? static_cast<float>(kDownStartDurationMs) / 1000.0f
-                : AnySequenceTime();
+        (void)sequenceTime;
 
         __try
         {
-            movement::SetBoneSequence(
-                unit, model, animationId, sequenceTime, speed);
+            movement::SetBoneSequence(unit, model, animationId, speed);
             g_state.boneAnimation = animationId;
             g_state.boneSpeed = speed;
             g_state.forcedUnit = unit;
@@ -491,7 +471,7 @@ namespace
         if (!unit || !model) return;
         __try
         {
-            movement::SetBoneSequence(unit, model, 0, 0.0f, 1.0f);
+            movement::SetBoneSequence(unit, model, 0, 1.0f);
             Pitch(unit) = 0.0f;
         }
         __except (EXCEPTION_EXECUTE_HANDLER)
@@ -515,7 +495,7 @@ namespace
     {
         __try
         {
-            movement::SetForwardControl(enabled, kForwardControlBit);
+            movement::SetControl(kForwardControlBit, enabled);
         }
         __except (EXCEPTION_EXECUTE_HANDLER)
         {
@@ -555,7 +535,7 @@ namespace
         {
             __try
             {
-                uint32_t& flags = MovementFlags(unit);
+                auto flags = MovementFlags(unit);
                 flags &= ~(kMoveForward | kMoveBackward |
                     kMovePendingStop | kMoveAscending |
                     kMoveDescending | kMoveFlying |
@@ -583,7 +563,7 @@ namespace
 
         __try
         {
-            uint32_t& flags = MovementFlags(unit);
+            auto flags = MovementFlags(unit);
             const uint32_t before = flags;
             uint32_t after =
                 before & ~(kMoveAscending | kMoveDescending);
@@ -810,7 +790,7 @@ namespace
 
         __try
         {
-            uint32_t& flags = MovementFlags(unit);
+            auto flags = MovementFlags(unit);
             const bool backHeld =
                 (GetAsyncKeyState('S') & 0x8000) != 0 ||
                 (GetAsyncKeyState(VK_DOWN) & 0x8000) != 0 ||
@@ -929,7 +909,7 @@ namespace
 
         __try
         {
-            float& facing = Facing(unit);
+            auto facing = Facing(unit);
             if (!g_state.haveFacing)
             {
                 g_state.lastFacing = facing;
@@ -1009,11 +989,7 @@ namespace
             if (model)
                 PlayAnimation(
                     unit, model, animation, 1.0f, 0.0f, true);
-            uint32_t durationMs = ModelSequenceDuration(
-                model, static_cast<uint32_t>(animation));
-            if (!durationMs)
-                durationMs = kWhirlFallbackDurationMs;
-            durationMs = std::clamp<uint32_t>(durationMs, 250, 15000);
+            const uint32_t durationMs = kWhirlFallbackDurationMs;
             WLOG_INFO(
                 "skyriding: whirling animation=%d duration=%u ms",
                 animation, durationMs);
@@ -1529,7 +1505,7 @@ namespace
             }
 
             g_state.launchPitchStart = std::clamp(
-                std::max(Pitch(unit), kSkywardMinPitch),
+                std::max(static_cast<float>(Pitch(unit)), kSkywardMinPitch),
                 kSkywardMinPitch, kSkywardMaxPitch);
             // The eased pitch below spends roughly half of the launch near
             // this angle and then blends to level glide.
@@ -1537,7 +1513,7 @@ namespace
                 g_state.launchForwardYards *
                 std::sin(g_state.launchPitchStart) * 0.62f;
 
-            uint32_t& flags = MovementFlags(unit);
+            auto flags = MovementFlags(unit);
             flags &= ~(kMoveBackward | kMovePendingStop | kMoveAscending |
                 kMoveDescending | kMoveFalling | kMoveFallingFar);
             flags |= kMoveForward | kMoveFlying | kMoveDisableGravity;
@@ -1621,7 +1597,7 @@ namespace
 
         __try
         {
-            uint32_t& flags = MovementFlags(unit);
+            auto flags = MovementFlags(unit);
             flags &= ~(kMoveFalling | kMoveFallingFar |
                 kMoveAscending | kMoveDescending |
                 kMoveBackward | kMovePendingStop);
@@ -1682,7 +1658,7 @@ namespace
                     g_state.launchHeading[0]);
                 Pitch(unit) =
                     g_state.launchPitchStart * smoothPitch;
-                uint32_t& flags = MovementFlags(unit);
+                auto flags = MovementFlags(unit);
                 flags &= ~(kMoveBackward | kMovePendingStop | kMoveAscending |
                     kMoveDescending | kMoveFalling | kMoveFallingFar);
                 flags |= kMoveForward | kMoveFlying | kMoveDisableGravity;
@@ -1735,7 +1711,7 @@ namespace
 
         __try
         {
-            uint32_t& flags = MovementFlags(unit);
+            auto flags = MovementFlags(unit);
             flags &= ~(kMoveBackward | kMovePendingStop |
                 kMoveAscending | kMoveDescending);
             flags |= kMoveFlying | kMoveDisableGravity | kMoveForward;

@@ -13,11 +13,6 @@ int __cdecl WXL_Load(const WXL_Api* api)
     if (!api || api->apiVersion != WXL_API_VERSION) return 0;
     wxl_skyriding::g_api = api;
 
-    if (!wxl_skyriding::ConfigBool("WXL_SKYRIDING", true))
-    {
-        api->Log(WXL_LOG_INFO, "wxl-skyriding", "controller disabled by configuration");
-        return 1;
-    }
     if (!wxl_skyriding::Network())
     {
         api->Log(WXL_LOG_ERROR, "wxl-skyriding", "required wxl.network v1 is unavailable");

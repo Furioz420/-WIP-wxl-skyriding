@@ -6,9 +6,9 @@ movement presentation, and modern mount animation selection.
 
 ## Client dependencies
 
-- `wxl-runtime` >= 1.0.0 for `wxl.network`.
+- `wxl-runtime` >= 1.1.0 for `wxl.network`.
 - `wxl-modern-m2` >= 1.1.0 with the `wxl.m2-animation` v1 service.
-- `wxl-spell-charges` >= 1.0.0 for the action-bar charge display used by Skyriding abilities.
+- `wxl-spell-charges` >= 1.1.0 for the action-bar charge display used by Skyriding abilities.
 - WarcraftXL v1.1 with the public opcode, movement, and extended-animation core contracts.
 
 WXL Hub reads these dependencies from `wxl.json` and installs missing or incompatible client modules
@@ -36,8 +36,18 @@ server changes separately for the exact Core revision in use.
 
 ## Installation
 
-Install with WXL Hub. The release ZIP contains `wxl-skyriding.dll` and `wxl-skyriding.cfg`; the Hub
-places both under `Extensions\\wxl-skyriding`. Restart the client after installing or updating it.
+Install with WXL Hub. The release ZIP contains `wxl-skyriding.dll`; the Hub
+places it under `Extensions\\wxl-skyriding`. Restart the client after installing or updating it.
 
 For manual installation, extract the release ZIP to the same directory after installing every client
 dependency. Configure and rebuild the server separately.
+
+## Integration and release checks
+
+Build `wxl-skyriding` as a Win32 Release target against the exact core, Runtime 1.1, Spell Charges 1.1, and Modern M2 animation service revisions. The proposed release workflow packages the DLL only. Server state/impulse handlers, Spell Charge persistence, WotLK-compatible spell rows, and an AdvFly-capable mount remain separately reviewed prerequisites.
+
+Test mount entry, takeoff, glide, pitch/turn control, vigor spending and recharge, landing, reconnect, and a server correction. Verify the client and server agree on `0x0527`-`0x052A`, and inspect logs. Roll back the DLLs and coordinated server/client data together. This source draft compiles in the integration checkout but requires an isolated package build and runtime acceptance; the `main` workflow still targets moving upstream `v1.1`.
+
+## Credits
+
+The WXL core ABI and original module interfaces come from WarcraftXL contributors. The local v1.1 integration commits in this snapshot are attributed to Furioz in the integration history. Preserve source-file notices and the GPL-3.0-or-later `LICENSE` when redistributing source or binaries.

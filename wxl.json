@@ -2,14 +2,14 @@
   "manifest": 1,
   "extension": {
     "id": "wxl-skyriding",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "abi": "1.1",
     "entry": "wxl-skyriding.dll",
-    "assets": ["wxl-skyriding.cfg"],
+    "assets": [],
     "requires": {
-      "wxl-runtime": ">=1.0.0",
+      "wxl-runtime": ">=1.1.0",
       "wxl-modern-m2": ">=1.1.0",
-      "wxl-spell-charges": ">=1.0.0"
+      "wxl-spell-charges": ">=1.1.0"
     },
     "conflicts": [],
     "hooks": []
@@ -19,13 +19,13 @@
       "kind": "server",
       "title": "Optional compatible Skyriding and Spell Charge server implementation",
       "detail": "Review the included AzerothCore reference or implement the same protocol in another server core. The Hub never modifies a server.",
-      "url": "https://github.com/Furioz420/wxl-skyriding/tree/main/server/azerothcore"
+      "url": "https://github.com/Furioz420/-WIP-wxl-skyriding/tree/main/server/azerothcore"
     },
     {
       "kind": "client-data",
       "title": "Matching WotLK-compatible spell rows and AdvFly mount data",
       "detail": "Review the spell and model contract before enabling the client module. The Hub never modifies MPQ or DBC data.",
-      "url": "https://github.com/Furioz420/wxl-skyriding/blob/main/data/CLIENT_SPELL_DATA.md"
+      "url": "https://github.com/Furioz420/-WIP-wxl-skyriding/blob/main/data/CLIENT_SPELL_DATA.md"
     }
   ],
   "deploy": {
