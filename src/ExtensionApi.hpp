@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include "common/ExtensionConfig.hpp"
 #include "wxl/M2AnimationApi.h"
 #include "wxl/NetworkApi.h"
 #include "wxl/PluginApi.h"
@@ -31,15 +30,6 @@ namespace wxl_skyriding
             g_animation = static_cast<const WXL_M2AnimationApi*>(
                 g_api->GetInterface("wxl.m2-animation", WXL_M2_ANIMATION_API_VERSION));
         return g_animation;
-    }
-
-    inline bool ConfigBool(const char* name, bool fallback)
-    {
-        char value[16] = {};
-        return wxl::ext::config::Raw(name, value, sizeof value,
-                                     "Extensions\\wxl-skyriding\\wxl-skyriding.cfg")
-            ? wxl::ext::config::Truthy(value, fallback)
-            : fallback;
     }
 
     bool InstallSkyriding();
